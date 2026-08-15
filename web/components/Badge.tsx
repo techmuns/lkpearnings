@@ -33,27 +33,27 @@ export function Badge({
 
 function Arrow({ dir }: { dir: "up" | "down" }) {
   return dir === "up" ? (
-    <svg width="7" height="7" viewBox="0 0 8 8" aria-hidden="true" className="shrink-0">
+    <svg width="6" height="6" viewBox="0 0 8 8" aria-hidden="true" className="shrink-0">
       <path d="M4 0.5 L7.5 6.5 L0.5 6.5 Z" fill="currentColor" />
     </svg>
   ) : (
-    <svg width="7" height="7" viewBox="0 0 8 8" aria-hidden="true" className="shrink-0">
+    <svg width="6" height="6" viewBox="0 0 8 8" aria-hidden="true" className="shrink-0">
       <path d="M4 7.5 L0.5 1.5 L7.5 1.5 Z" fill="currentColor" />
     </svg>
   );
 }
 
-const CHANGE_CLASS: Record<Tone, string> = {
-  up: "bg-emerald-50 text-emerald-700",
-  down: "bg-rose-50 text-rose-700",
-  flat: "bg-slate-100 text-slate-500",
-  none: "bg-slate-100 text-slate-400",
+const CHANGE_TEXT: Record<Tone, string> = {
+  up: "text-emerald-600",
+  down: "text-rose-500",
+  flat: "text-slate-400",
+  none: "text-slate-300",
 };
 
 /**
- * A small YoY/QoQ change chip: label + arrow + magnitude, colored by sign.
- * If `swing` is set (net-profit sign flip) it shows the turnaround label
- * instead of a potentially misleading percentage.
+ * A quiet YoY/QoQ change indicator: muted label + arrow + magnitude, colored by
+ * sign — no filled background (keeps a dense table calm). If `swing` is set
+ * (net-profit sign flip) it shows the turnaround label instead of a %.
  */
 export function ChangeBadge({
   label,
@@ -68,13 +68,13 @@ export function ChangeBadge({
     const up = swing === "loss->profit";
     return (
       <span
-        className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-semibold ${
-          up ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"
-        }`}
+        className="inline-flex items-center gap-1 text-[11px] font-medium"
         title={`${label}: ${up ? "Loss to Profit" : "Profit to Loss"}`}
       >
-        <span className="text-[9px] font-bold uppercase tracking-wide opacity-70">{label}</span>
-        {up ? "Loss→Profit" : "Profit→Loss"}
+        <span className="text-[10px] font-medium text-slate-400">{label}</span>
+        <span className={up ? "text-emerald-600" : "text-rose-500"}>
+          {up ? "Loss→Profit" : "Profit→Loss"}
+        </span>
       </span>
     );
   }
@@ -89,21 +89,20 @@ export function ChangeBadge({
           : "flat";
 
   return (
-    <span
-      className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-semibold ${CHANGE_CLASS[tone]}`}
-      title={`${label} change`}
-    >
-      <span className="text-[9px] font-bold uppercase tracking-wide opacity-70">{label}</span>
-      {tone === "up" && <Arrow dir="up" />}
-      {tone === "down" && <Arrow dir="down" />}
-      {formatChangePct(pct)}
+    <span className="inline-flex items-center gap-1 text-[11px] font-medium" title={`${label} change`}>
+      <span className="text-[10px] font-medium text-slate-400">{label}</span>
+      <span className={`inline-flex items-center gap-0.5 tabular-nums ${CHANGE_TEXT[tone]}`}>
+        {tone === "up" && <Arrow dir="up" />}
+        {tone === "down" && <Arrow dir="down" />}
+        {formatChangePct(pct)}
+      </span>
     </span>
   );
 }
 
 /**
- * Margin comparison chip: shows a comparison-period margin LEVEL with an arrow
- * indicating whether the current margin is higher (green) or lower (red).
+ * Margin comparison indicator: shows a comparison-period margin LEVEL with an
+ * arrow for whether the current margin is higher (green) or lower (red).
  */
 export function MarginCompareBadge({
   label,
@@ -127,16 +126,13 @@ export function MarginCompareBadge({
         ? "down"
         : "flat";
   return (
-    <span
-      className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-semibold ${CHANGE_CLASS[tone]}`}
-      title={`${label} margin`}
-    >
-      <span className="text-[9px] font-bold uppercase tracking-wide opacity-70">{label}</span>
-      {tone === "up" && <Arrow dir="up" />}
-      {tone === "down" && <Arrow dir="down" />}
-      {typeof compare === "number" && Number.isFinite(compare)
-        ? `${compare.toFixed(1)}%`
-        : "—"}
+    <span className="inline-flex items-center gap-1 text-[11px] font-medium" title={`${label} margin`}>
+      <span className="text-[10px] font-medium text-slate-400">{label}</span>
+      <span className={`inline-flex items-center gap-0.5 tabular-nums ${CHANGE_TEXT[tone]}`}>
+        {tone === "up" && <Arrow dir="up" />}
+        {tone === "down" && <Arrow dir="down" />}
+        {typeof compare === "number" && Number.isFinite(compare) ? `${compare.toFixed(1)}%` : "—"}
+      </span>
     </span>
   );
 }

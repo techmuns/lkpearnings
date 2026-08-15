@@ -85,9 +85,14 @@ interface D1DatabaseLike {
   prepare(query: string): D1PreparedStatement;
 }
 
+// Only surface rows that have actually been extracted (a result_type + at least
+// one real metric). Un-read "pending" stubs stay hidden until a run processes
+// them — so companies appear on the dashboard exactly as their PDFs get read.
 const SELECT_SQL = `
   SELECT *
   FROM earnings
+  WHERE result_type IS NOT NULL
+    AND (revenue_cr IS NOT NULL OR net_profit_cr IS NOT NULL OR ebitda_cr IS NOT NULL)
   ORDER BY (filed_at IS NULL) ASC, filed_at DESC, id DESC
   LIMIT 2000
 `;

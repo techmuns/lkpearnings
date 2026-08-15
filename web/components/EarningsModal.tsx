@@ -36,12 +36,12 @@ function ValueRow({
   const fmt = (v: number | null) => (isPct ? formatPct(v) : formatCroreBare(v));
   return (
     <tr className="border-t border-slate-100">
-      <td className="px-3 py-2.5 text-sm font-semibold text-slate-700">{name}</td>
-      <td className="bg-brand-50/60 px-3 py-2.5 text-right text-sm font-bold text-slate-900">
+      <td className="px-3 py-2.5 text-sm font-medium text-slate-600">{name}</td>
+      <td className="bg-brand-50/50 px-3 py-2.5 text-right text-sm font-semibold tabular-nums text-slate-800">
         {fmt(cur)}
       </td>
-      <td className="px-3 py-2.5 text-right text-sm text-slate-600">{fmt(prev)}</td>
-      <td className="px-3 py-2.5 text-right text-sm text-slate-600">{fmt(yr)}</td>
+      <td className="px-3 py-2.5 text-right text-sm tabular-nums text-slate-500">{fmt(prev)}</td>
+      <td className="px-3 py-2.5 text-right text-sm tabular-nums text-slate-500">{fmt(yr)}</td>
     </tr>
   );
 }
@@ -119,11 +119,6 @@ export function EarningsModal({
                 <span className="rounded-full bg-white/20 px-2 py-0.5 font-semibold">
                   {titleCaseResultType(row.result_type)}
                 </span>
-                {row.bse_scrip_code ? (
-                  <span className="rounded-full bg-white/15 px-2 py-0.5">
-                    BSE {row.bse_scrip_code}
-                  </span>
-                ) : null}
                 {row.nse_symbol ? (
                   <span className="rounded-full bg-white/15 px-2 py-0.5">{row.nse_symbol}</span>
                 ) : null}

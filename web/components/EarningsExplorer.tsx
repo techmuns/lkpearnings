@@ -2,10 +2,9 @@
 
 import { useMemo, useState, type ReactNode } from "react";
 import type { EarningsRow } from "@/lib/earnings";
-import { accentFor } from "@/lib/accents";
 import { daysSince, formatCrore, formatDate, formatPct, titleCaseResultType } from "@/lib/format";
 import { exportEarningsToExcel } from "@/lib/excel";
-import { Badge, ChangeBadge, MarginCompareBadge } from "./Badge";
+import { ChangeBadge, MarginCompareBadge } from "./Badge";
 import { Card } from "./Card";
 import { EarningsTable } from "./EarningsTable";
 import { EarningsModal } from "./EarningsModal";
@@ -71,8 +70,7 @@ function EarningsCards({
 }) {
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-      {rows.map((row, i) => {
-        const accent = accentFor(i);
+      {rows.map((row) => {
         return (
           <Card
             key={row.dedup_key}
@@ -83,26 +81,23 @@ function EarningsCards({
               className="w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
               aria-label={`View details for ${row.company_name}`}
             >
-              <div className="h-1.5 w-full" style={{ background: accent.bar }} aria-hidden="true" />
+              <div className="h-1 w-full bg-gradient-to-r from-brand-500 to-sky-400" aria-hidden="true" />
               <div className="p-4">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <div className="truncate font-semibold text-slate-900">{row.company_name}</div>
-                    <div className="mt-1 flex flex-wrap items-center gap-1">
+                    <div className="truncate font-semibold text-slate-800">{row.company_name}</div>
+                    <div className="mt-1 flex flex-wrap items-center gap-2">
                       {row.quarter_label ? (
-                        <span
-                          className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-bold"
-                          style={{ background: accent.soft, color: accent.text }}
-                        >
+                        <span className="inline-flex items-center rounded-md bg-brand-50 px-1.5 py-0.5 text-[11px] font-semibold text-brand-700">
                           {row.quarter_label}
                         </span>
                       ) : null}
-                      <span className="text-[11px] font-medium text-slate-400">
+                      {row.nse_symbol ? (
+                        <span className="text-[11px] font-medium text-slate-400">{row.nse_symbol}</span>
+                      ) : null}
+                      <span className="text-[11px] text-slate-400">
                         {titleCaseResultType(row.result_type)}
                       </span>
-                      {row.bse_scrip_code ? (
-                        <Badge tone="slate">BSE {row.bse_scrip_code}</Badge>
-                      ) : null}
                     </div>
                   </div>
                 </div>
@@ -131,10 +126,10 @@ function EarningsCards({
                     <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
                       EBITDA Margin
                     </div>
-                    <div className="mt-0.5 text-[15px] font-bold text-slate-900">
+                    <div className="mt-0.5 text-[15px] font-semibold tabular-nums text-slate-800">
                       {formatPct(row.ebitda_margin_pct)}
                     </div>
-                    <div className="mt-1 flex flex-wrap gap-1">
+                    <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
                       <MarginCompareBadge
                         label="YoY"
                         current={row.ebitda_margin_pct}
@@ -178,8 +173,8 @@ function CardMetric({
   return (
     <div>
       <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">{label}</div>
-      <div className="mt-0.5 text-[15px] font-bold text-slate-900">{value}</div>
-      <div className="mt-1 flex flex-wrap gap-1">
+      <div className="mt-0.5 text-[15px] font-semibold tabular-nums text-slate-800">{value}</div>
+      <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
         <ChangeBadge label="YoY" pct={yoy} swing={swing} />
         <ChangeBadge label="QoQ" pct={qoq} />
       </div>
