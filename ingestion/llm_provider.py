@@ -17,7 +17,12 @@ import re
 from dataclasses import dataclass, field
 from typing import Any
 
-MAX_INPUT_CHARS = 12000
+# SEBI result PDFs often lead with a cover letter / board-meeting outcome /
+# auditor's report before the actual financial-results table, so a tight cap
+# truncates the numbers out of view. Claude on Bedrock has a large context
+# window; ~40k chars (~10k tokens) reaches the table on virtually all filings
+# while staying cheap. (Live runs showed 12k was cutting tables off.)
+MAX_INPUT_CHARS = 40000
 
 SYSTEM_PROMPT = (
     "You are a meticulous financial-data extraction engine for Indian SEBI "
@@ -49,6 +54,7 @@ Return a strict JSON object of EXACTLY this shape:
 }}
 
 RULES:
+- The financial-results table may appear AFTER a cover letter, board-meeting outcome, or auditor's report — read the ENTIRE text to locate it before concluding data is absent.
 - Copy numbers VERBATIM as strings, keeping signs. A value in parentheses means negative, e.g. "(1,234)". Do NOT strip commas or convert units.
 - "net_profit" is the profit/(loss) for the period (after tax).
 - "total_expenses" is the total expenses line; "finance_costs" and "depreciation" are the finance costs and depreciation/amortisation lines within it.
