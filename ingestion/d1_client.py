@@ -81,13 +81,22 @@ class D1Client:
     def apply_migration_sql(self, sql_text: str) -> None:
         """Run each statement in a migration file idempotently.
 
-        `CREATE TABLE/INDEX IF NOT EXISTS` never errors; for future migrations
-        that ADD COLUMN, "already exists" / "duplicate column" errors are
-        swallowed so the DB self-migrates with no manual step.
+        Comment lines (full-line and trailing ``-- …``) are stripped FIRST so a
+        leading comment block can't get glued to — and swallow — the statement
+        that follows it. `CREATE TABLE/INDEX IF NOT EXISTS` never errors; for
+        future migrations that ADD COLUMN, "already exists" / "duplicate column"
+        errors are swallowed so the DB self-migrates with no manual step.
         """
-        for raw in sql_text.split(";"):
+        code_lines: list[str] = []
+        for line in sql_text.splitlines():
+            code = line.split("--", 1)[0]  # migrations contain no '--' inside literals
+            if code.strip():
+                code_lines.append(code)
+        cleaned = "\n".join(code_lines)
+
+        for raw in cleaned.split(";"):
             stmt = raw.strip()
-            if not stmt or stmt.startswith("--"):
+            if not stmt:
                 continue
             data = self._post(stmt, None)
             if data.get("success", False):
