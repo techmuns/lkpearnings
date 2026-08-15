@@ -16,7 +16,7 @@ on:
       pdf_limit:
         description: "Max PDFs to read this run (INGEST_LIMIT)"
         required: false
-        default: "15"
+        default: "40"
   schedule:
     - cron: "0 16 * * *" # 21:30 IST — evening results surge
     - cron: "0 3 * * *" # 08:30 IST — overnight sweep
@@ -32,7 +32,8 @@ permissions:
 jobs:
   ingest:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # 40 PDFs/run x ~34s each ≈ 23 min; 45 gives headroom for slow PDFs / retries.
+    timeout-minutes: 45
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -68,6 +69,6 @@ jobs:
           SCRAPEDO_API_KEY: ${{ secrets.SCRAPEDO_API_KEY }}
           # --- Window / cost caps (dispatch inputs override the schedule defaults) ---
           INGEST_DAYS: ${{ github.event.inputs.days || '2' }}
-          INGEST_LIMIT: ${{ github.event.inputs.pdf_limit || '15' }}
+          INGEST_LIMIT: ${{ github.event.inputs.pdf_limit || '40' }}
           INGEST_MAX_PAGES: ${{ vars.INGEST_MAX_PAGES || '60' }}
         run: python main.py

@@ -166,8 +166,10 @@ Optional repo **variable**: `INGEST_MAX_PAGES` (default `60`).
 - `0 3 * * *` — **08:30 IST**, sweeps overnight/late-night filings.
 
 With `INGEST_DAYS=2` the two runs overlap so nothing is missed; dedup on
-`dedup_key` keeps re-runs idempotent. `INGEST_LIMIT` (default 15) caps how many
-PDFs are read per run as a cost guard.
+`dedup_key` keeps re-runs idempotent. `INGEST_LIMIT` (default 40) caps how many
+PDFs are read per run as a cost guard — so the two daily runs process ~80
+filings/day (raise it, and the 45-min job timeout, to clear a filing-deadline
+backlog faster).
 
 ---
 
