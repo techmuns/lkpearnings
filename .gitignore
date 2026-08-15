@@ -1,0 +1,45 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Next.js / OpenNext build output
+web/.next/
+web/out/
+web/.open-next/
+web/.wrangler/
+web/cloudflare-env.d.ts
+web/next-env.d.ts
+
+# Production
+build/
+dist/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+.pytest_cache/
+
+# Environment / secrets
+.env
+.env.local
+.env.*.local
+ingestion/.env
+
+# Wrangler / Cloudflare local state
+.wrangler/
+.dev.vars
+
+# Editor / OS
+.DS_Store
+*.swp
+.idea/
+.vscode/
+
+# Logs
+*.log
+npm-debug.log*

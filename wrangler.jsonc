@@ -1,0 +1,36 @@
+{
+  // ---------------------------------------------------------------------------
+  // ROOT wrangler config — used ONLY by Cloudflare Workers Builds (git deploy).
+  // It builds the Next.js app (via OpenNext) inside /web and serves the worker.
+  // Keep this in sync with web/wrangler.jsonc (same name + same DB binding).
+  //
+  // NOTE: create the D1 database once with:
+  //   npx wrangler d1 create lkpearnings
+  // then paste the returned database_id below AND in web/wrangler.jsonc AND in
+  // the CF_D1_DATABASE_ID GitHub Actions secret.
+  // ---------------------------------------------------------------------------
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "lkpearnings",
+  "main": "web/.open-next/worker.js",
+  "compatibility_date": "2025-03-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "build": {
+    "cwd": "web",
+    "command": "npm ci && ./node_modules/.bin/opennextjs-cloudflare build"
+  },
+  "assets": {
+    "binding": "ASSETS",
+    "directory": "web/.open-next/assets"
+  },
+  "observability": {
+    "enabled": true
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "lkpearnings",
+      "database_id": "REPLACE_WITH_D1_DATABASE_ID",
+      "migrations_dir": "db/migrations"
+    }
+  ]
+}
