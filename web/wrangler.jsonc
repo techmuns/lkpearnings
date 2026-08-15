@@ -1,0 +1,30 @@
+{
+  // ---------------------------------------------------------------------------
+  // WEB wrangler config — used for local dev, `npm run preview`, and the
+  // db:migrate / db:seed scripts. Keep in sync with the root wrangler.jsonc
+  // (same worker name + same DB binding + same database_id).
+  //
+  // Paste the id from `npx wrangler d1 create lkpearnings` into database_id
+  // below (and in the root wrangler.jsonc and the CF_D1_DATABASE_ID secret).
+  // ---------------------------------------------------------------------------
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "lkpearnings",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2025-03-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "binding": "ASSETS",
+    "directory": ".open-next/assets"
+  },
+  "observability": {
+    "enabled": true
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "lkpearnings",
+      "database_id": "REPLACE_WITH_D1_DATABASE_ID",
+      "migrations_dir": "../db/migrations"
+    }
+  ]
+}
