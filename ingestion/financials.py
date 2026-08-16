@@ -195,7 +195,9 @@ def net_profit_swing(current: float | None, year_ago: float | None) -> str | Non
 # Dates & quarter label
 # --------------------------------------------------------------------------- #
 def _iso(y: int, mo: int, d: int) -> str | None:
-    if not (1 <= mo <= 12 and 1 <= d <= 31 and 1900 <= y <= 2100):
+    if y < 100:  # 2-digit year -> 20xx
+        y += 2000
+    if not (1 <= mo <= 12 and 1 <= d <= 31 and 1990 <= y <= 2100):
         return None
     return f"{y:04d}-{mo:02d}-{d:02d}"
 
@@ -218,7 +220,7 @@ def parse_date_to_iso(raw: str | None) -> str | None:
     if m:
         return _iso(int(m.group(1)), int(m.group(2)), int(m.group(3)))
 
-    m = re.search(r"\b(\d{1,2})[./-](\d{1,2})[./-](\d{4})\b", t)
+    m = re.search(r"\b(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})\b", t)
     if m:
         a, b, y = int(m.group(1)), int(m.group(2)), int(m.group(3))
         if a > 12 >= b:
@@ -229,13 +231,13 @@ def parse_date_to_iso(raw: str | None) -> str | None:
             day, mo = a, b  # Indian filings are day-first
         return _iso(y, mo, day)
 
-    m = re.search(r"([A-Za-z]{3,9})\.?\s+(\d{1,2})(?:st|nd|rd|th)?,?\s+(\d{4})", t)
+    m = re.search(r"([A-Za-z]{3,9})\.?[\s-]+(\d{1,2})(?:st|nd|rd|th)?,?\s*(\d{2,4})", t)
     if m:
         mo = _MONTHS.get(m.group(1).lower())
         if mo:
             return _iso(int(m.group(3)), mo, int(m.group(2)))
 
-    m = re.search(r"(\d{1,2})(?:st|nd|rd|th)?\s+([A-Za-z]{3,9})\.?,?\s+(\d{4})", t)
+    m = re.search(r"(\d{1,2})(?:st|nd|rd|th)?[\s.\/-]+([A-Za-z]{3,9})\.?[\s.,\/-]+(\d{2,4})", t)
     if m:
         mo = _MONTHS.get(m.group(2).lower())
         if mo:
@@ -322,8 +324,11 @@ def derive_result(result: dict[str, Any]) -> dict[str, Any]:
     m_prevq = ebitda_margin(eb_prevq, rev_prevq)
     m_yr = ebitda_margin(eb_yr, rev_yr)
 
-    # Period-end dates + quarter label.
+    # Period-end dates + quarter label. Fall back to the verbatim quarter_label
+    # for the current-period date when the column heading didn't parse.
     period_end = parse_date_to_iso(result.get("current_quarter_end"))
+    if period_end is None:
+        period_end = parse_date_to_iso(result.get("quarter_label"))
     prev_quarter_end = parse_date_to_iso(result.get("previous_quarter_end"))
     year_ago_quarter_end = parse_date_to_iso(result.get("year_ago_quarter_end"))
     quarter_label = derive_quarter_label(period_end)

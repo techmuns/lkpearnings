@@ -93,3 +93,78 @@ export function titleCaseResultType(rt: string | null | undefined): string {
   if (rt === "consolidated") return "Consolidated";
   return "—";
 }
+
+// --- Quarter label normalization -------------------------------------------
+// Many filings store a messy verbatim period ("Quarter ended June 30th,2026",
+// "30-Jun-26", "For the Quarter Ended 30.06.2026"). We collapse them all to a
+// single clean Indian-FY label (e.g. "Q1 FY27") for display and filtering.
+const MONTH_IDX: Record<string, number> = {
+  jan: 1, january: 1, feb: 2, february: 2, mar: 3, march: 3, apr: 4, april: 4,
+  may: 5, jun: 6, june: 6, jul: 7, july: 7, aug: 8, august: 8, sep: 9, sept: 9,
+  september: 9, oct: 10, october: 10, nov: 11, november: 11, dec: 12, december: 12,
+};
+
+function isoOf(y: number, mo: number, d: number): string | null {
+  if (y < 100) y += 2000;
+  if (mo < 1 || mo > 12 || d < 1 || d > 31 || y < 1990 || y > 2100) return null;
+  return `${y}-${String(mo).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+}
+
+/** Best-effort parse of a verbatim date string to ISO (2-digit years -> 20xx). */
+export function parseDateToISO(text: string | null | undefined): string | null {
+  if (!text) return null;
+  const t = String(text);
+  let m = /(\d{4})-(\d{1,2})-(\d{1,2})/.exec(t);
+  if (m) return isoOf(+m[1], +m[2], +m[3]);
+  m = /\b(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{2,4})\b/.exec(t);
+  if (m) {
+    let a = +m[1], b = +m[2];
+    const y = +m[3];
+    let day: number, mo: number;
+    if (a > 12 && b <= 12) { day = a; mo = b; }
+    else if (b > 12 && a <= 12) { day = b; mo = a; }
+    else { day = a; mo = b; } // day-first (Indian)
+    return isoOf(y, mo, day);
+  }
+  m = /([A-Za-z]{3,9})\.?[\s-]+(\d{1,2})(?:st|nd|rd|th)?,?\s*(\d{2,4})/.exec(t);
+  if (m && MONTH_IDX[m[1].toLowerCase()]) return isoOf(+m[3], MONTH_IDX[m[1].toLowerCase()], +m[2]);
+  m = /(\d{1,2})(?:st|nd|rd|th)?[\s.\/-]+([A-Za-z]{3,9})\.?[\s.,\/-]+(\d{2,4})/.exec(t);
+  if (m && MONTH_IDX[m[2].toLowerCase()]) return isoOf(+m[3], MONTH_IDX[m[2].toLowerCase()], +m[1]);
+  return null;
+}
+
+export function deriveQuarterFromISO(iso: string | null | undefined): string | null {
+  if (!iso) return null;
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
+  if (!m) return null;
+  const year = +m[1];
+  const month = +m[2];
+  let q: number;
+  let fyEnd: number;
+  if (month >= 4 && month <= 6) { q = 1; fyEnd = year + 1; }
+  else if (month >= 7 && month <= 9) { q = 2; fyEnd = year + 1; }
+  else if (month >= 10 && month <= 12) { q = 3; fyEnd = year + 1; }
+  else { q = 4; fyEnd = year; }
+  return `Q${q} FY${String(fyEnd % 100).padStart(2, "0")}`;
+}
+
+/** One clean quarter label for a row: from period_end, else an already-clean
+ *  stored label, else parsed out of the messy verbatim label. Null if unknown. */
+export function cleanQuarter(
+  periodEnd: string | null | undefined,
+  rawLabel: string | null | undefined,
+): string | null {
+  const fromPeriod = deriveQuarterFromISO(periodEnd);
+  if (fromPeriod) return fromPeriod;
+  if (rawLabel && /^Q[1-4]\s*FY\s*\d{2}$/i.test(rawLabel.trim())) {
+    return rawLabel.trim().toUpperCase().replace(/\s+/g, " ");
+  }
+  return deriveQuarterFromISO(parseDateToISO(rawLabel));
+}
+
+/** Sort key so "Q1 FY27" ranks above "Q4 FY26" (by FY, then quarter). */
+export function quarterSortKey(label: string): number {
+  const m = /^Q([1-4])\s*FY(\d{2})$/i.exec(label.trim());
+  if (!m) return -1;
+  return +m[2] * 10 + +m[1];
+}

@@ -1,7 +1,7 @@
 "use client";
 
 import type { EarningsRow } from "@/lib/earnings";
-import { formatCrore, formatPct, titleCaseResultType } from "@/lib/format";
+import { cleanQuarter, formatCrore, formatPct, titleCaseResultType } from "@/lib/format";
 import { ChangeBadge, MarginCompareBadge } from "./Badge";
 
 function MetricCell({
@@ -16,11 +16,11 @@ function MetricCell({
   swing?: string | null;
 }) {
   return (
-    <td className="px-4 py-3 align-top">
-      <div className="whitespace-nowrap text-[15px] font-semibold tabular-nums text-slate-800">
+    <td className="px-4 py-3 text-right align-top">
+      <div className="whitespace-nowrap text-[13px] font-medium tabular-nums text-slate-700">
         {formatCrore(value)}
       </div>
-      <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
+      <div className="mt-1 flex flex-nowrap items-center justify-end gap-x-3 whitespace-nowrap">
         <ChangeBadge label="YoY" pct={yoy} swing={swing} />
         <ChangeBadge label="QoQ" pct={qoq} />
       </div>
@@ -57,76 +57,85 @@ export function EarningsTable({
 }) {
   return (
     <div className="overflow-x-auto rounded-2xl ring-1 ring-slate-200/70">
-      <table className="w-full min-w-[900px] border-collapse text-sm">
+      <table className="w-full min-w-[1040px] border-collapse">
         <thead>
-          <tr className="border-b border-slate-200 bg-slate-50 text-left">
-            {["Company", "Revenue", "Net Profit", "EBITDA", "EBITDA Margin", "Source"].map((h) => (
+          <tr className="border-b-2 border-slate-200 bg-slate-50">
+            <th className="px-4 py-3.5 text-left text-[12px] font-bold uppercase tracking-wide text-slate-600">
+              Company
+            </th>
+            {["Revenue", "Net Profit", "EBITDA", "EBITDA Margin"].map((h) => (
               <th
                 key={h}
-                className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-slate-500"
+                className="px-4 py-3.5 text-right text-[12px] font-bold uppercase tracking-wide text-slate-600"
               >
                 {h}
               </th>
             ))}
+            <th className="px-4 py-3.5 text-center text-[12px] font-bold uppercase tracking-wide text-slate-600">
+              Source
+            </th>
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-100 bg-white">
-          {rows.map((row) => (
-            <tr
-              key={row.dedup_key}
-              onClick={() => onRowClick(row)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  onRowClick(row);
-                }
-              }}
-              tabIndex={0}
-              role="button"
-              aria-label={`View details for ${row.company_name}`}
-              className="cursor-pointer transition-colors hover:bg-slate-50/70 focus:outline-none focus-visible:bg-brand-50"
-            >
-              <td className="px-4 py-3 align-top">
-                <div className="font-semibold text-slate-800">{row.company_name}</div>
-                <div className="mt-1 flex flex-wrap items-center gap-2">
-                  {row.quarter_label ? (
-                    <span className="inline-flex items-center rounded-md bg-brand-50 px-1.5 py-0.5 text-[11px] font-semibold text-brand-700">
-                      {row.quarter_label}
+          {rows.map((row) => {
+            const quarter = cleanQuarter(row.period_end, row.quarter_label);
+            return (
+              <tr
+                key={row.dedup_key}
+                onClick={() => onRowClick(row)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    onRowClick(row);
+                  }
+                }}
+                tabIndex={0}
+                role="button"
+                aria-label={`View details for ${row.company_name}`}
+                className="cursor-pointer transition-colors hover:bg-slate-50/70 focus:outline-none focus-visible:bg-brand-50"
+              >
+                <td className="px-4 py-3 align-top">
+                  <div className="text-sm font-medium text-slate-800">{row.company_name}</div>
+                  <div className="mt-1 flex flex-wrap items-center gap-2">
+                    {quarter ? (
+                      <span className="inline-flex items-center rounded-md bg-brand-50 px-1.5 py-0.5 text-[11px] font-semibold text-brand-700">
+                        {quarter}
+                      </span>
+                    ) : null}
+                    {row.nse_symbol ? (
+                      <span className="text-[11px] font-medium text-slate-400">{row.nse_symbol}</span>
+                    ) : null}
+                    <span className="text-[11px] text-slate-400">
+                      {titleCaseResultType(row.result_type)}
                     </span>
-                  ) : null}
-                  {row.nse_symbol ? (
-                    <span className="text-[11px] font-medium text-slate-400">{row.nse_symbol}</span>
-                  ) : null}
-                  <span className="text-[11px] text-slate-400">
-                    {titleCaseResultType(row.result_type)}
-                  </span>
-                </div>
-              </td>
+                  </div>
+                </td>
 
-              <MetricCell value={row.revenue_cr} yoy={row.revenue_yoy_pct} qoq={row.revenue_qoq_pct} />
-              <MetricCell
-                value={row.net_profit_cr}
-                yoy={row.net_profit_yoy_pct}
-                qoq={row.net_profit_qoq_pct}
-                swing={row.net_profit_swing}
-              />
-              <MetricCell value={row.ebitda_cr} yoy={row.ebitda_yoy_pct} qoq={row.ebitda_qoq_pct} />
+                <MetricCell value={row.revenue_cr} yoy={row.revenue_yoy_pct} qoq={row.revenue_qoq_pct} />
+                <MetricCell
+                  value={row.net_profit_cr}
+                  yoy={row.net_profit_yoy_pct}
+                  qoq={row.net_profit_qoq_pct}
+                  swing={row.net_profit_swing}
+                />
+                <MetricCell value={row.ebitda_cr} yoy={row.ebitda_yoy_pct} qoq={row.ebitda_qoq_pct} />
 
-              <td className="px-4 py-3 align-top">
-                <div className="whitespace-nowrap text-[15px] font-semibold tabular-nums text-slate-800">
-                  {formatPct(row.ebitda_margin_pct)}
-                </div>
-                <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
-                  <MarginCompareBadge label="YoY" current={row.ebitda_margin_pct} compare={row.ebitda_margin_yoy_pct} />
-                  <MarginCompareBadge label="QoQ" current={row.ebitda_margin_pct} compare={row.ebitda_margin_qoq_pct} />
-                </div>
-              </td>
+                <td className="px-4 py-3 text-right align-top">
+                  <div className="whitespace-nowrap text-[13px] font-medium tabular-nums text-slate-700">
+                    {formatPct(row.ebitda_margin_pct)}
+                  </div>
+                  <div className="mt-1 flex flex-nowrap items-center justify-end gap-x-3 whitespace-nowrap">
+                    <MarginCompareBadge label="YoY" current={row.ebitda_margin_pct} compare={row.ebitda_margin_yoy_pct} />
+                    <MarginCompareBadge label="QoQ" current={row.ebitda_margin_pct} compare={row.ebitda_margin_qoq_pct} />
+                  </div>
+                </td>
 
-              <td className="px-4 py-3 align-middle">
-                <SourceLink url={row.attachment_url} />
-              </td>
-            </tr>
-          ))}
+                <td className="px-4 py-3 text-center align-middle">
+                  <SourceLink url={row.attachment_url} />
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>

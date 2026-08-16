@@ -3,6 +3,7 @@
 import { useEffect, useRef, type ReactNode } from "react";
 import type { EarningsRow } from "@/lib/earnings";
 import {
+  cleanQuarter,
   formatCroreBare,
   formatDate,
   formatDateTime,
@@ -111,9 +112,9 @@ export function EarningsModal({
                 {row.company_name}
               </h2>
               <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs">
-                {row.quarter_label ? (
+                {cleanQuarter(row.period_end, row.quarter_label) ? (
                   <span className="rounded-full bg-white/20 px-2 py-0.5 font-semibold">
-                    {row.quarter_label}
+                    {cleanQuarter(row.period_end, row.quarter_label)}
                   </span>
                 ) : null}
                 <span className="rounded-full bg-white/20 px-2 py-0.5 font-semibold">

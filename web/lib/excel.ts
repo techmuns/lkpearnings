@@ -1,118 +1,112 @@
 import type { EarningsRow } from "./earnings";
-import { titleCaseResultType } from "./format";
+import { cleanQuarter, formatDate, titleCaseResultType } from "./format";
 
 /**
- * Dependency-free Excel export: an HTML table served as `.xls`, which Excel /
- * Google Sheets / LibreOffice all open natively. Includes a branded title row,
- * a colored frozen header, numeric columns (mso-number-format so Excel treats
- * them as numbers), and an autofilter.
+ * Dependency-free Excel export using the SpreadsheetML 2003 XML format — which
+ * gives real column widths, wrapped text, number formats, a bold frozen header,
+ * an autofilter and NO gridlines (far cleaner than an HTML-table export).
+ * Opens natively in Excel / LibreOffice / Google Sheets.
  */
 
-const COLUMNS: { label: string; kind: "text" | "num2" | "pct1" | "url" }[] = [
-  { label: "Company", kind: "text" },
-  { label: "BSE", kind: "text" },
-  { label: "NSE", kind: "text" },
-  { label: "Quarter", kind: "text" },
-  { label: "Result type", kind: "text" },
-  { label: "Revenue RsCr", kind: "num2" },
-  { label: "Rev YoY%", kind: "pct1" },
-  { label: "Rev QoQ%", kind: "pct1" },
-  { label: "Net Profit RsCr", kind: "num2" },
-  { label: "NP YoY%", kind: "pct1" },
-  { label: "NP QoQ%", kind: "pct1" },
-  { label: "EBITDA RsCr", kind: "num2" },
-  { label: "EBITDA YoY%", kind: "pct1" },
-  { label: "EBITDA QoQ%", kind: "pct1" },
-  { label: "EBITDA Margin%", kind: "pct1" },
-  { label: "Filed", kind: "text" },
-  { label: "Source URL", kind: "url" },
+type Kind = "text" | "center" | "num" | "pct";
+
+interface Col {
+  header: string;
+  width: number;
+  kind: Kind;
+  get: (r: EarningsRow) => string | number | null;
+}
+
+const COLS: Col[] = [
+  { header: "Company", width: 230, kind: "text", get: (r) => r.company_name },
+  { header: "Quarter", width: 64, kind: "center", get: (r) => cleanQuarter(r.period_end, r.quarter_label) ?? "" },
+  { header: "Result Type", width: 92, kind: "center", get: (r) => titleCaseResultType(r.result_type) },
+  { header: "Revenue (Rs Cr)", width: 100, kind: "num", get: (r) => r.revenue_cr },
+  { header: "Rev YoY %", width: 72, kind: "pct", get: (r) => r.revenue_yoy_pct },
+  { header: "Rev QoQ %", width: 72, kind: "pct", get: (r) => r.revenue_qoq_pct },
+  { header: "Net Profit (Rs Cr)", width: 108, kind: "num", get: (r) => r.net_profit_cr },
+  { header: "NP YoY %", width: 72, kind: "pct", get: (r) => r.net_profit_yoy_pct },
+  { header: "NP QoQ %", width: 72, kind: "pct", get: (r) => r.net_profit_qoq_pct },
+  { header: "EBITDA (Rs Cr)", width: 100, kind: "num", get: (r) => r.ebitda_cr },
+  { header: "EBITDA YoY %", width: 84, kind: "pct", get: (r) => r.ebitda_yoy_pct },
+  { header: "EBITDA QoQ %", width: 84, kind: "pct", get: (r) => r.ebitda_qoq_pct },
+  { header: "EBITDA Margin %", width: 100, kind: "pct", get: (r) => r.ebitda_margin_pct },
+  { header: "Filed", width: 96, kind: "center", get: (r) => formatDate(r.filed_at) },
 ];
 
+const STYLE_ID: Record<Kind, string> = {
+  text: "txt",
+  center: "ctr",
+  num: "num",
+  pct: "pct",
+};
+
 function esc(v: unknown): string {
-  if (v === null || v === undefined) return "";
-  return String(v)
+  return String(v ?? "")
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
 }
 
-function numCell(v: number | null | undefined, cls: string): string {
-  if (typeof v !== "number" || !Number.isFinite(v)) return `<td class="${cls}"></td>`;
-  return `<td class="${cls}">${v}</td>`;
+function cell(col: Col, r: EarningsRow): string {
+  const id = STYLE_ID[col.kind];
+  const v = col.get(r);
+  if (col.kind === "num" || col.kind === "pct") {
+    if (typeof v === "number" && Number.isFinite(v)) {
+      return `<Cell ss:StyleID="${id}"><Data ss:Type="Number">${v}</Data></Cell>`;
+    }
+    return `<Cell ss:StyleID="${id}"/>`; // blank for missing numbers
+  }
+  return `<Cell ss:StyleID="${id}"><Data ss:Type="String">${esc(v)}</Data></Cell>`;
 }
 
-function rowCells(r: EarningsRow): string {
-  const filed = r.filed_at ? esc(r.filed_at) : "";
-  return [
-    `<td class="tx">${esc(r.company_name)}</td>`,
-    `<td class="tx">${esc(r.bse_scrip_code ?? "")}</td>`,
-    `<td class="tx">${esc(r.nse_symbol ?? "")}</td>`,
-    `<td class="tx">${esc(r.quarter_label ?? "")}</td>`,
-    `<td class="tx">${esc(titleCaseResultType(r.result_type))}</td>`,
-    numCell(r.revenue_cr, "n2"),
-    numCell(r.revenue_yoy_pct, "p1"),
-    numCell(r.revenue_qoq_pct, "p1"),
-    numCell(r.net_profit_cr, "n2"),
-    numCell(r.net_profit_yoy_pct, "p1"),
-    numCell(r.net_profit_qoq_pct, "p1"),
-    numCell(r.ebitda_cr, "n2"),
-    numCell(r.ebitda_yoy_pct, "p1"),
-    numCell(r.ebitda_qoq_pct, "p1"),
-    numCell(r.ebitda_margin_pct, "p1"),
-    `<td class="tx">${filed}</td>`,
-    `<td class="tx">${esc(r.attachment_url ?? "")}</td>`,
-  ].join("");
-}
+export function buildEarningsWorkbookXml(rows: EarningsRow[]): string {
+  const columns = COLS.map((c) => `<Column ss:Width="${c.width}"/>`).join("");
+  const header = COLS.map((c) => `<Cell ss:StyleID="hdr"><Data ss:Type="String">${esc(c.header)}</Data></Cell>`).join("");
+  const body = rows
+    .map((r) => `<Row ss:Height="17">${COLS.map((c) => cell(c, r)).join("")}</Row>`)
+    .join("");
 
-export function buildEarningsWorkbookHtml(rows: EarningsRow[]): string {
-  const ncols = COLUMNS.length;
-  const header = COLUMNS.map((c) => `<th>${esc(c.label)}</th>`).join("");
-  const body = rows.map((r) => `<tr>${rowCells(r)}</tr>`).join("");
-  // Freeze the top 2 rows (title + header); autofilter over the header row.
-  const lastCol = String.fromCharCode(64 + ncols); // A..Q for <=17 cols
-  return `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
-<head>
-<meta charset="utf-8" />
-<!--[if gte mso 9]><xml>
- <x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet>
-  <x:Name>Earnings</x:Name>
-  <x:WorksheetOptions>
-   <x:FreezePanes/>
-   <x:FrozenNoSplit/>
-   <x:SplitHorizontal>2</x:SplitHorizontal>
-   <x:TopRowBottomPane>2</x:TopRowBottomPane>
-   <x:ActivePane>2</x:ActivePane>
-   <x:Panes><x:Pane><x:Number>3</x:Number></x:Pane><x:Pane><x:Number>2</x:Number></x:Pane></x:Panes>
-   <x:AutoFilter x:Range="A2:${lastCol}2"/>
-   <x:DisplayGridlines/>
-  </x:WorksheetOptions>
- </x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook>
-</xml><![endif]-->
-<style>
-  table { border-collapse: collapse; font-family: Calibri, Arial, sans-serif; font-size: 11pt; }
-  td, th { border: 0.5pt solid #cbd5e1; padding: 4px 8px; }
-  .title { background: #1e3a8a; color: #ffffff; font-size: 15pt; font-weight: bold; text-align: left; }
-  thead th { background: #2563eb; color: #ffffff; font-weight: bold; text-align: center; mso-pattern: solid #2563eb; }
-  .tx { mso-number-format: "\\@"; }
-  .n2 { mso-number-format: "#,##0.00"; text-align: right; }
-  .p1 { mso-number-format: "0.0"; text-align: right; }
-</style>
-</head>
-<body>
-<table>
-  <tr><td class="title" colspan="${ncols}">Earnings Tracker — LKP Securities</td></tr>
-  <thead><tr>${header}</tr></thead>
-  <tbody>${body}</tbody>
-</table>
-</body>
-</html>`;
+  return `<?xml version="1.0"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:o="urn:schemas-microsoft-com:office:office"
+ xmlns:x="urn:schemas-microsoft-com:office:excel"
+ xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
+ <Styles>
+  <Style ss:ID="Default" ss:Name="Normal"><Alignment ss:Vertical="Center"/><Font ss:FontName="Calibri" ss:Size="11" ss:Color="#1E293B"/></Style>
+  <Style ss:ID="title"><Font ss:FontName="Calibri" ss:Bold="1" ss:Size="14" ss:Color="#FFFFFF"/><Interior ss:Color="#1E3A8A" ss:Pattern="Solid"/><Alignment ss:Vertical="Center" ss:Horizontal="Left"/></Style>
+  <Style ss:ID="hdr"><Font ss:FontName="Calibri" ss:Bold="1" ss:Color="#FFFFFF"/><Interior ss:Color="#2563EB" ss:Pattern="Solid"/><Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/></Style>
+  <Style ss:ID="txt"><Alignment ss:Horizontal="Left" ss:Vertical="Center" ss:WrapText="1"/></Style>
+  <Style ss:ID="ctr"><Alignment ss:Horizontal="Center" ss:Vertical="Center"/></Style>
+  <Style ss:ID="num"><Alignment ss:Horizontal="Right" ss:Vertical="Center"/><NumberFormat ss:Format="#,##0.00"/></Style>
+  <Style ss:ID="pct"><Alignment ss:Horizontal="Right" ss:Vertical="Center"/><NumberFormat ss:Format="0.0"/></Style>
+ </Styles>
+ <Worksheet ss:Name="Earnings">
+  <Table>
+   ${columns}
+   <Row ss:Height="28"><Cell ss:MergeAcross="${COLS.length - 1}" ss:StyleID="title"><Data ss:Type="String">Earnings Tracker — LKP Securities</Data></Cell></Row>
+   <Row ss:Height="30">${header}</Row>
+   ${body}
+  </Table>
+  <AutoFilter x:Range="R2C1:R2C${COLS.length}" xmlns="urn:schemas-microsoft-com:office:excel"/>
+  <WorksheetOptions xmlns="urn:schemas-microsoft-com:office:excel">
+   <DoNotDisplayGridlines/>
+   <FreezePanes/>
+   <FrozenNoSplit/>
+   <SplitHorizontal>2</SplitHorizontal>
+   <TopRowBottomPane>2</TopRowBottomPane>
+   <ActivePane>2</ActivePane>
+  </WorksheetOptions>
+ </Worksheet>
+</Workbook>`;
 }
 
 export function exportEarningsToExcel(rows: EarningsRow[], filename = "lkp-earnings.xls"): void {
-  const html = buildEarningsWorkbookHtml(rows);
-  // Prepend a UTF-8 BOM so Excel reads non-ASCII (₹, em dashes) correctly.
-  const blob = new Blob(["﻿" + html], { type: "application/vnd.ms-excel;charset=utf-8" });
+  const xml = buildEarningsWorkbookXml(rows);
+  const blob = new Blob([xml], { type: "application/vnd.ms-excel;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;

@@ -64,7 +64,7 @@ export default async function Page() {
           <StatTile
             label="Results tracked"
             value={total}
-            sub="filings × statement type"
+            sub="quarterly results extracted"
             gradient={G.brand}
             icon={
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -151,11 +151,7 @@ export default async function Page() {
                 <span className="font-semibold text-slate-700">Earnings Tracker</span> — LKP Securities
               </span>
             </div>
-            <p className="max-w-xl text-xs leading-relaxed text-slate-400">
-              Figures are auto-extracted from BSE result PDFs; all derivations (EBITDA, margins,
-              YoY, QoQ) are computed in code from numbers that appear in the filing. Every row links
-              to its source PDF. Not investment advice.
-            </p>
+            <p className="text-xs text-slate-400">Auto-updated twice daily from BSE filings.</p>
           </div>
         </div>
       </footer>
